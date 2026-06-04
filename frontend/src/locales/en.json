@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "services": "Services",
+    "howItWorks": "How It Works",
+    "contact": "Contact Us",
+    "findHelper": "Find a Helper"
+  },
+  "hero": {
+    "tagline": "Trusted Construction Services",
+    "headline": "Find Skilled Workers\nYou Can Trust",
+    "sub": "Vetted electricians, cleaners, construction workers, and more — connected to you by our team in Bangladesh.",
+    "cta": "Browse Services",
+    "ctaSub": "Request a Worker",
+    "badge": "NID Verified Professionals"
+  },
+  "categories": {
+    "title": "Our Services",
+    "sub": "Skilled professionals for every home need",
+    "items": {
+      "cleaning":      "Home Cleaning",
+      "construction":  "Construction",
+      "electrical":    "Electrical",
+      "plumbing":      "Plumbing",
+      "painting":      "Painting",
+      "ac":            "AC Repair",
+      "appliance":     "Appliance Repair",
+      "moving":        "Moving & Shifting",
+      "security":      "Security Guard",
+      "mason":      "Mason / Wall Repair",
+      "tilefix":    "Tiles Fixing",
+      "carpenter":  "Carpenter"
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "sub": "Three simple steps to get help at home",
+    "steps": [
+      { "num": "01", "title": "Browse Workers", "desc": "Browse verified worker profiles by service category and location." },
+      { "num": "02", "title": "Send a Request", "desc": "Tell us what you need. Our team reviews your request within hours." },
+      { "num": "03", "title": "We Connect You", "desc": "We match you with the right worker and confirm the appointment." }
+    ]
+  },
+  "workers": {
+    "title": "Featured Workers",
+    "sub": "Every worker is personally verified by our team",
+    "available": "Available",
+    "verified": "NID Verified",
+    "jobs": "jobs",
+    "contact": "Request Worker"
+  },
+  "request": {
+    "title": "Need a Worker?",
+    "sub": "Fill in your details and we will find the right person for you",
+    "name": "Your Name",
+    "phone": "Phone Number",
+    "service": "Service Needed",
+    "location": "Your Location",
+    "message": "Describe your requirement",
+    "submit": "Send Request",
+    "sending": "Sending...",
+    "success": "Request sent! We will call you within 2 hours.",
+    "selectService": "Select a service"
+  },
+  "footer": {
+    "tagline": "Connecting skilled workers with families across Bangladesh.",
+    "contact": "Contact",
+    "payment": "We accept",
+    "rights": "All rights reserved."
+  }
+}
