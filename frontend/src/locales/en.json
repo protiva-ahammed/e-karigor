@@ -26,7 +26,7 @@
       "appliance":     "Appliance Repair",
       "moving":        "Moving & Shifting",
       "security":      "Security Guard",
-      "mason":      "Mason / Wall Repair",
+      "mason":      "Mason-Wall Repair",
       "tilefix":    "Tiles Fixing",
       "carpenter":  "Carpenter"
     }
@@ -35,7 +35,7 @@
     "title": "How It Works",
     "sub": "Three simple steps to get help at home",
     "steps": [
-      { "num": "01", "title": "Browse Workers", "desc": "Browse verified worker profiles by service category and location." },
+      { "num": "01", "title": "Browse Services", "desc": "Browse verified worker profiles by service category and location." },
       { "num": "02", "title": "Send a Request", "desc": "Tell us what you need. Our team reviews your request within hours." },
       { "num": "03", "title": "We Connect You", "desc": "We match you with the right worker and confirm the appointment." }
     ]
@@ -55,14 +55,14 @@
     "phone": "Phone Number",
     "service": "Service Needed",
     "location": "Your Location",
-    "message": "Describe your requirement",
+    "message": "Describe your requirements",
     "submit": "Send Request",
     "sending": "Sending...",
     "success": "Request sent! We will call you within 2 hours.",
     "selectService": "Select a service"
   },
   "footer": {
-    "tagline": "Connecting skilled workers with families across Bangladesh.",
+    "tagline": "Connecting skilled workers across Bangladesh.",
     "contact": "Contact",
     "payment": "We accept",
     "rights": "All rights reserved."

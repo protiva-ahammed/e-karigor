@@ -53,10 +53,9 @@ export default function Footer({ lang }: FooterProps) {
             </div>
           </div>
         </div>
-
-        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500">
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-gray-500">
+        {/* <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500"> */}
           <span className="font-body">© {year} E-Karigor. {t('footer.rights')}</span>
-          <span className="font-body text-xs">Built with ❤️ for 🇧🇩 BD</span>
         </div>
       </div>
     </footer>
