@@ -143,9 +143,8 @@ E-Karigor supports Bangladeshi mobile financial services:
 
 ## Credits
 
-Built and customised by [your name] ·
-Base template by [mimaishel](https://github.com/mimaishel/webdev_portfolio) (MIT License) ·
-[Source on GitHub](https://github.com/your-username/e-karigor)
+Designed and built by  ahammed·
+[Source on GitHub]([https://github.com/protiva-ahammed/e-karigor])
 
 ---
 
