@@ -1,0 +1,271 @@
+"How do your services communicate without tight coupling?"
+"We use domain events. When a service request is created — the RequestService publishes a ServiceRequestCreatedEvent containing the request ID, customer phone, and category. The NotificationService listens for this event and sends an SMS. The AnalyticsService listens and updates dashboards. RequestService knows nothing about either of them. If we add a new listener tomorrow — RequestService does not change at all. Today these events are in-memory via Spring's ApplicationEventPublisher. When we need to scale — we replace the publisher with Kafka. Zero change to business logic."
+To keep application modules as decoupled as possible from each other, their primary means of interaction should be event publication and consumption. This avoids the originating module to know about all potentially interested parties, which is a key aspect to enable application module integration testing (see Integration Testing Application Modules).
+
+
+Why do we use DomainEvent in E-karigor?
+When a client submits a service request — multiple things need to happen: a payment record must be created, a notification must be sent, analytics must be updated. DomainEvent lets RequestService announce "this happened" without knowing or caring who responds — each other service reacts independently.
+
+
+Hard coupling — the wrong way:
+@Service
+public class RequestService {
+
+
+    // RequestService imports and depends on 3 other services
+    @Autowired
+    private PaymentService paymentService;
+
+
+    @Autowired
+    private NotificationService notificationService;
+
+
+    @Autowired
+    private AnalyticsService analyticsService;
+
+
+    public void createRequest(ServiceRequest request) {
+        requestRepository.save(request);
+
+
+        // directly calls 3 other services
+        paymentService.createRecord(request.getId());
+        notificationService.sendSMS(request.getPhone());
+        analyticsService.record(request.getCategorySlug());
+    }}
+Problems:
+If PaymentService is broken — RequestService crashes too. If you want to add a 4th action — you must touch RequestService code. If PaymentService is slow — the client waits. Testing RequestService requires mocking 3 other services. This is tight coupling — one class knows too much about too many others.
+Current structure — loose coupling with events:
+@Service
+public class RequestService {
+
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+
+    public void createRequest(ServiceRequest request) {
+        requestRepository.save(request);
+
+
+        // publishes ONE event — knows nothing about who listens
+        eventPublisher.publishEvent(
+            new ServiceRequestCreatedEvent(
+                request.getId(),
+                request.getCustomerPhone(),
+                request.getCategorySlug()
+            )
+        );
+        // RequestService is done. Its responsibility ends here.
+    }
+}
+
+
+// Each listener is completely independent
+@Service
+public class PaymentService {
+    @EventListener
+    public void on(ServiceRequestCreatedEvent event) {
+        createPaymentRecord(event.getRequestId());
+    }
+}
+
+
+@Service
+public class NotificationService {
+    @EventListener
+    public void on(ServiceRequestCreatedEvent event) {
+        sendSMS(event.getCustomerPhone());
+    }}
+Why this is better:
+PaymentService breaks — RequestService keeps running. Add a 5th listener tomorrow — RequestService code does not change at all. Each service is independently testable. The event is the contract — stable, documented, owned by the publishing domain.
+PayPay — when a payment completes:
+PaymentCompletedEvent published
+        ↓
+├── ReceiptService → generates PDF receipt
+├── PointsService → awards loyalty points
+├── NotificationService → sends push notification
+├── FraudService → updates fraud model score
+├── ReconciliationService → logs for end-of-day settlement
+├── AnalyticsService → updates merchant dashboard
+└── TaxService → records for tax reporting
+Why PayPay uses Kafka instead of Spring events:
+Spring ApplicationEventPublisher is in-memory — same JVM. If the notification service crashes mid-processing — the event is lost. For a payment system — losing events means a customer paid but never got a receipt, or points were never awarded. Unacceptable.
+Kafka persists every event to disk. If NotificationService crashes — when it restarts, it picks up from exactly where it stopped. No events lost. This is called durability — critical for financial systems.
+Topic: payment.completed
+├── Partition 0 → high-value payments
+├── Partition 1 → standard payments
+└── Partition 2 → refunds
+
+
+Consumer groups:
+├── receipt-service-group
+├── points-service-group
+├── notification-service-group
+└── reconciliation-service-group
+Each consumer group processes events independently at its own pace. ReceiptService might process 1000 events/second. ReconciliationService might batch them and process once per hour. Same events, different consumption patterns, completely independent.
+
+
+
+
+Amazon — order placed event:
+OrderPlacedEvent
+        ↓
+├── InventoryService → reserve stock
+├── FulfillmentService → create pick task in warehouse
+├── PaymentService → authorise payment
+├── NotificationService → send confirmation email
+└── RecommendationService → update "customers also bought"
+The event Amazon publishes has a specific structure — orderId, customerId, items[], totalAmount, shippingAddress. Every downstream service gets exactly what it needs without querying the orders database.
+The key insight at Amazon scale: At 1 million orders per day — if every downstream service queried the orders database for context, that is 5 million additional database queries per day just to get data the event could have carried. Events carry their own context. This is called event enrichment — a deliberate design decision.
+
+
+Client submits service request
+        ↓
+RequestService saves request
+        ↓
+publishes ServiceRequestCreatedEvent
+        ↓
+├── PaymentService listens
+│   → creates PaymentRecord (status: PENDING)
+│
+└── NotificationService listens
+    → logs for admin (no SMS yet)
+
+
+Admin manually confirms bKash payment
+        ↓
+Admin calls PATCH /api/payments/{id}/confirm
+        ↓
+PaymentService updates status → CONFIRMED
+        ↓
+publishes PaymentConfirmedEvent
+        ↓
+├── NotificationService listens
+│   → sends SMS to client and worker
+│
+└── RequestService listens
+    → updates request status → CONFIRMED
+ Bikash api integration:
+Client pays via bKash
+        ↓
+bKash sends webhook to E-Karigor
+        ↓
+PaymentWebhookController receives it
+        ↓
+PaymentService verifies transaction ID
+        ↓
+publishes PaymentConfirmedEvent
+        ↓
+Everything downstream happens automatically
+Admin no longer needed for payment confirmation
+Phase 3 — Multiple payment providers:
+PaymentConfirmedEvent
+├── source: "BKASH"
+├── source: "NAGAD"
+├── source: "ROCKET"
+└── source: "CASH"  ← admin manually confirmed
+Same event. Different source field. All listeners handle it identically. We add Nagad support by adding a Nagad webhook controller — the rest of the system does not know or care.
+Phase 4 — Kafka (when E-Karigor has real traffic):
+Replace ApplicationEventPublisher with Kafka producer. All events are now durable — if NotificationService crashes during SMS sending, when it restarts it resends the SMS. No lost notifications.
+The ServiceRequestCreatedEvent and PaymentConfirmedEvent classes you wrote today — unchanged. Only the publisher infrastructure changes. This is the architectural payoff of designing with events from day one.
+
+
+
+
+
+
+3.Memory Isolation becomes Global Persistence
+If Docker container scales up to 3 instances, a standard Spring in-memory store results in 3 isolated, un-synchronized heaps. When you use Kafka, all 3 Docker containers point to the same Kafka broker cluster. The cluster acts as a single source of truth that stores your event domain state externally.
+
+
+[ Docker Container (Spring Boot Web App) ]
++-------------------------------------------------------------+
+
+
+| JVM Heap:                                                   |
+|  - [Old Model]: EventDomain lived here as a Singleton Bean  |
+|  - [New Model]: KafkaProducer serializes EventDomain        |
++-------------------------------------------------------------+
+                               |
+                               | (Sends Bytes over TCP)
+                               v
+[ Apache Kafka Cluster Infrastructure ]
++-------------------------------------------------------------+
+
+
+| Topic: "event-domain-topic"                                 |
+|  Partition 0 (Append-Only Log on Disk + OS Page Cache)      |
+|  +-------------------------------------------------------+  |
+|  | [Offset 0: Event 1] -> [Offset 1: Event 2] -> [Active] |  |
+|  +-------------------------------------------------------+  |
++-------------------------------------------------------------+
+ Want to read more: https://blog.ippon.tech/event-driven-architecture-getting-started-with-kafka-part-1
+
+A real world scenario:
+Here is how a high-volume payment system works in real life, transitioning from a vulnerable local JVM architecture to a highly scalable Kafka architecture used by companies like Amazon and PayPay. [1]
+________________
+
+
+💳 The Real-Life Scenario: A Payment Gateway
+A customer clicks "Pay Now" for a $100 purchase on an e-commerce website. This single click triggers a Payment Request containing a User ID, Order ID, Amount, and Payment Method.
+________________
+
+
+🚨 Phase 1: The Local JVM Architecture (How it Fails at Scale)
+1. How the Event Domain is Raised
+The moment the user clicks pay, the Spring Boot application instantiates a PaymentEvent object inside the JVM On-Heap Memory. This object acts as the Event Domain model, carrying variables like status = "PENDING", amount = 100.00, and retryCount = 0.
+2. How and Why the Container Handles It
+* How: A dedicated web-server thread inside the Docker container grabs this JVM Heap object and synchronously executes three sequential tasks:
+   1. Validates the user's balance.
+   2. Sends an API call out to an external bank network (Visa/Mastercard).
+   3. Updates the local inventory to reserve the item. [2]
+* Why it can handle it (initially): If you only have a few concurrent users, local JVM memory handles this instantly. It uses internal RAM pointers to track the transaction state with zero network lag, meaning processing speeds are incredibly fast (nanoseconds).
+3. The Failure Point (Why this cannot scale)
+Imagine a flash sale where 10,000 users click "Pay Now" at the exact same millisecond.
+* The Bank Bottleneck: The external bank API slows down and takes 5 seconds to respond.
+* JVM Exhaustion: The Docker container’s JVM Heap quickly fills up with 10,000 frozen PaymentEvent objects waiting for responses. The container runs out of available threads and memory, crashing with an OutOfMemoryError. [3]
+* The Disaster: Because the data lived entirely in the volatile JVM memory, all pending payments vanish. The users are charged by the bank, but the e-commerce app has no memory of the transaction, resulting in corrupted data and lost revenue.
+________________
+
+
+🚀 Phase 2: The Modern Kafka Architecture (How Amazon & PayPay Improved It)
+To handle millions of transactions safely without crashing, mega-platforms like Amazon and PayPay separate the ingestion of the payment from the processing of the payment using Apache Kafka.
+[ 10,000+ USERS ]
+       │ (Clicks "Pay Now")
+       ▼
+[ Stateless Spring Container ] ──> (Instantly drops bytes & returns "Processing...")
+       │
+       ▼ (Asynchronous TCP Push)
+[ Apache Kafka Cluster ] 
+  └── Topic: "payment-events" 
+        ├── Partition 0 ──> [ [PayEvent 1] -> [PayEvent 4] ] ──> (Consumer Service A)
+        ├── Partition 1 ──> [ [PayEvent 2] -> [PayEvent 5] ] ──> (Consumer Service B)
+        └── Partition 2 ──> [ [PayEvent 3] -> [PayEvent 6] ] ──> (Consumer Service C)
+
+
+How Kafka Transforms the System:
+1. Instant Memory Offloading: When the user clicks pay, the Spring container creates the PaymentEvent on-heap, immediately serializes it into binary bytes, and sends it directly to a Kafka topic named payment-events.
+2. Immediate Success Response: The container does not wait for the bank API. As soon as Kafka confirms it has safely appended the message to its immutable disk log, the container frees up its JVM memory and tells the user: "Your payment is processing, we will email you shortly." This takes less than 10 milliseconds. [4]
+3. Decoupled Throttling (Consumer Groups): Independent background worker applications (Consumers) pull events from the Kafka topic at a controlled pace. If the bank API can only handle 100 transactions per second, the consumers only pull 100 events per second from Kafka. The remaining 9,900 events sit safely buffered inside Kafka’s OS page cache and disk storage without overwhelming the system. [5, 6]
+The Improvements for Amazon & PayPay:
+* Fault Tolerance: If a processing container crashes mid-payment, no data is lost. The message remains securely stored inside Kafka. A new container spins up, looks at its last saved Kafka Offset, and resumes processing right where the crashed container stopped. [7, 8, 9]
+* Strict Ordering via Partitions: PayPay must ensure that a user's wallet cannot be deducted twice for the same click. Kafka uses the userId or orderId as a Partition Key. This guarantees that all events related to a specific payment land in the exact same partition and are processed sequentially, completely preventing double-spending bugs. [10, 11]
+________________
+
+
+If you are planning to build a microservices infrastructure for your application, would you like to see the Spring Boot code for a Kafka Payment Producer, or should we design the Database Retry Logic when a payment event temporarily fails?
+
+
+[1] https://inument.com
+[2] https://medium.com
+[3] https://medium.com
+[4] https://www.linkedin.com
+[5] https://medium.com
+[6] https://medium.com
+[7] https://medium.com
+[8] https://aiven.io
+[9] https://medium.com
+[10] https://medium.com
+[11] https://levelup.gitconnected.com

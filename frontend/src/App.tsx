@@ -19,7 +19,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${lang === 'bn' ? 'font-bangla' : 'font-body'}`}>
+    <div className={`min-h-screen ${lang === 'en' ? 'font-bangla' : 'font-body'}`}>
       <Navbar lang={lang} setLang={handleLang} />
       <Hero lang={lang} />
       <Categories lang={lang} />
