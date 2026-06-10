@@ -16,19 +16,19 @@ E-Karigor bridges that gap. Our admin team physically vets workers, verifies the
 
 ## Services
 
-- 🧹 Home Cleaning — বাড়ি পরিষ্কার
-- 🏗️ Construction & Renovation — নির্মাণ ও সংস্কার
-- ⚡ Electrical Work — বৈদ্যুতিক কাজ
-- 🔧 Plumbing — পাইপলাইন মেরামত
-- 🖌️ Painting — রং করা
-- ❄️ AC Repair & Service — এসি মেরামত
-- 🔌 Appliance Repair — যন্ত্রপাতি মেরামত
-- 📦 Moving & Shifting — মালামাল স্থানান্তর
-- 🛡️ Security Guard — নিরাপত্তা প্রহরী
-- 📚 Tutoring — গৃহশিক্ষক
-- 🧱 Mason / Wall Repair — রাজমিস্ত্রি
-- 🪟 Tiles Fixing — টাইলস মেরামত
-- 🪵 Carpenter — কাঠমিস্ত্রি
+-  Home Cleaning — বাড়ি পরিষ্কার
+-  Construction & Renovation — নির্মাণ ও সংস্কার
+-  Electrical Work — বৈদ্যুতিক কাজ
+-  Plumbing — পাইপলাইন মেরামত
+-  Painting — রং করা
+-  AC Repair & Service — এসি মেরামত
+-  Appliance Repair — যন্ত্রপাতি মেরামত
+-  Moving & Shifting — মালামাল স্থানান্তর
+-  Security Guard — নিরাপত্তা প্রহরী
+-  Tutoring — গৃহশিক্ষক
+-  Mason / Wall Repair — রাজমিস্ত্রি
+-  Tiles Fixing — টাইলস মেরামত
+-  Carpenter — কাঠমিস্ত্রি
 
 ---
 
@@ -122,7 +122,7 @@ npm run preview
 - [x] Service categories
 - [x] Worker profile cards
 - [x] Service request form
-- [ ] Backend API (Spring Boot)
+- [+] Backend API (Spring Boot)
 - [ ] Admin dashboard — worker management
 - [ ] Client accounts — request history
 - [ ] Worker ratings and reviews
