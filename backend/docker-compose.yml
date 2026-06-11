@@ -1,42 +1,72 @@
-version: '3.8'
+spring:
+  application:
+    name: ekarigor-api
 
-services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: ekarigor-db
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - ekarigor-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ekarigor -d ekarigordb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      pool-name: EkarigorPool
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ekarigor-backend
-    ports:
-      - "8080:8080"
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS}
-    depends_on:
-      postgres:
-        condition: service_healthy
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
 
-volumes:
-  ekarigor-db-data:
+  mybatis:
+    mapper-locations: classpath:mapper/*.xml
+    type-aliases-package: com.ekarigor.api
+    configuration:
+      map-underscore-to-camel-case: true
+      default-fetch-size: 100
+      default-statement-timeout: 30
+
+#  sql:
+#    init:
+#      mode: always
+#      data-locations: classpath:data.sql
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.kajkori: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: OFF
+    com.zaxxer.hikari: INFO
